@@ -47,7 +47,8 @@ export async function submitAnswer(req: Request, res: Response) {
       feedback: q.explanation ?? '',
       updatedSkills: updates,
       recommendations,
-      userSkills: (await import('../store/inMemoryDB')).then(m => m.getUserSkills(userId)).catch(() => ({}))
+      // This line has been corrected from the original:
+      userSkills: (await import('../store/inMemoryDB')).getUserSkills(userId)
     });
   } catch (err) {
     console.error('submitAnswer error', err);
