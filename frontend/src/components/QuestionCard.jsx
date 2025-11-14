@@ -1,41 +1,80 @@
-import React from 'react';
-import SkillBadge from './SkillBadge';
+import React, { useState } from 'react';
 
-export default function QuestionCard({ q, onSubmit, disabled }) {
-  if (!q) return <div className="qcard"><em>No question</em></div>;
+/**
+ * A component to display a single quiz question.
+ */
+function QuestionCard({ question, onAnswerSubmit, disabled }) {
+  const [selectedAnswer, setSelectedAnswer] = useState(null);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (selectedAnswer) {
+      onAnswerSubmit(selectedAnswer);
+    }
+  };
+
+  const { type, prompt, choices } = question;
 
   return (
-    <div className="qcard" aria-live="polite">
-      <div style={{ marginBottom: 8 }}>
-        <strong>Q:</strong>
-        <div style={{ marginTop: 6 }}>{q.prompt}</div>
-      </div>
+    <div className="bg-white p-6 rounded-lg shadow-md">
+      <h2 className="text-2xl font-semibold mb-4">{prompt}</h2>
+      
+      <form onSubmit={handleSubmit}>
+        {type === 'mcq' && choices && (
+          <div className="space-y-3">
+            {choices.map((choice, index) => {
+              const choiceId = `q_${question.id}_choice_${index}`;
+              return (
+                <label 
+                  key={choiceId} 
+                  htmlFor={choiceId}
+                  className={`block p-4 rounded-lg border cursor-pointer ${
+                    selectedAnswer === choice 
+                      ? 'bg-blue-100 border-blue-500 ring-2 ring-blue-300' 
+                      : 'border-gray-300 hover:bg-gray-50'
+                  } ${disabled ? 'opacity-70 cursor-not-allowed' : ''}`}
+                >
+                  <input
+                    type="radio"
+                    id={choiceId}
+                    name={question.id}
+                    value={choice}
+                    checked={selectedAnswer === choice}
+                    onChange={(e) => setSelectedAnswer(e.target.value)}
+                    disabled={disabled}
+                    className="mr-3"
+                  />
+                  {choice}
+                </label>
+              );
+            })}
+          </div>
+        )}
 
-      {q.skills && q.skills.length > 0 && (
-        <div style={{ marginBottom: 10 }}>
-          {q.skills.map(s => <SkillBadge key={s} label={s} />)}
-        </div>
-      )}
+        {type === 'short' && (
+          <div>
+            <input
+              type="text"
+              placeholder="Type your answer..."
+              onChange={(e) => setSelectedAnswer(e.target.value)}
+              disabled={disabled}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-300"
+            />
+          </div>
+        )}
 
-      {q.type === 'mcq' ? (
-        <div className="choices">
-          {q.choices.map(ch => (
-            <button key={ch} onClick={() => onSubmit(q.id, ch)} disabled={disabled}>{ch}</button>
-          ))}
-        </div>
-      ) : (
-        <ShortAnswer q={q} onSubmit={onSubmit} disabled={disabled} />
-      )}
+        {!disabled && (
+          <button
+            type="submit"
+            disabled={!selectedAnswer}
+            className="mt-6 w-full bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+          >
+            Submit Answer
+          </button>
+        )}
+      </form>
     </div>
   );
 }
 
-function ShortAnswer({ q, onSubmit, disabled }) {
-  const [val, setVal] = React.useState('');
-  return (
-    <div>
-      <input value={val} onChange={e => setVal(e.target.value)} placeholder="Type your answer" style={{ padding: 8, width: '70%', marginRight: 8 }} />
-      <button onClick={() => { onSubmit(q.id, val); setVal(''); }} disabled={disabled}>Submit</button>
-    </div>
-  );
-}
+export default QuestionCard;
