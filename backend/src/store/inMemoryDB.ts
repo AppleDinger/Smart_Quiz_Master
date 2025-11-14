@@ -1,18 +1,40 @@
-// backend/src/store/inMemoryDB.ts
-import type { Question, Quiz } from '../types';
+// inMemoryDB.ts
+// Simple in-memory storage for quizzes, questions, attempts and user skills.
 
-/**
- * inMemoryDB.ts
- * Typed in-memory storage for questions, quizzes, attempts and user skills.
- */
+export type Question = {
+  id: string;
+  prompt: string;
+  type: 'mcq' | 'short';
+  choices?: string[];
+  answer?: string;
+  explanation?: string;
+  skills?: string[];
+  difficulty?: number;
+  max_score?: number;
+};
+
+export type Quiz = {
+  id: string;
+  userId: string;
+  category: string;
+  difficulty: string;
+  questions: string[]; // question ids
+  createdAt: string;
+};
+
+export type UserSkillRecord = {
+  score: number;
+  intervalDays?: number;
+  nextReview?: string;
+};
 
 const quizzes: Record<string, Quiz> = {};
 const questions: Record<string, Question> = {};
-const userSkills: Record<string, Record<string, { score: number; intervalDays?: number; nextReview?: string }>> = {};
-const attempts: any[] = [];
+const userSkills: Record<string, Record<string, UserSkillRecord>> = {};
+const attempts: Array<Record<string, any>> = [];
 
-/* Quiz helpers */
-export function saveQuiz(userId: string, category: string, difficulty: string, qArr: Question[]) {
+// quiz helpers
+export function saveQuiz(userId: string, category: string, difficulty: string, qArr: Question[]): Quiz {
   const quizId = `quiz_${Date.now()}`;
   const quiz: Quiz = {
     id: quizId,
@@ -20,11 +42,11 @@ export function saveQuiz(userId: string, category: string, difficulty: string, q
     category,
     difficulty,
     questions: qArr.map(q => q.id),
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   };
   quizzes[quizId] = quiz;
 
-  // save questions into question store (overwrite if exists)
+  // store/overwrite questions by id
   qArr.forEach(q => {
     questions[q.id] = q;
   });
@@ -40,31 +62,27 @@ export function getQuestionById(id: string): Question | undefined {
   return questions[id];
 }
 
-export function saveAttempt(attempt: any) {
+export function saveAttempt(attempt: Record<string, any>) {
   attempts.push(attempt);
   return attempt;
 }
 
-/* User skills helpers */
-export function getUserSkills(userId: string) {
+// user skills
+export function getUserSkills(userId: string): Record<string, UserSkillRecord> {
   return userSkills[userId] || {};
 }
 
-export function getUserSkillRecord(userId: string, skillKey: string) {
+export function getUserSkillRecord(userId: string, skillKey: string): UserSkillRecord | undefined {
   if (!userSkills[userId]) return undefined;
   return userSkills[userId][skillKey];
 }
 
-export function setUserSkillRecord(userId: string, skillKey: string, record: { score: number; intervalDays?: number; nextReview?: string }) {
+export function setUserSkillRecord(userId: string, skillKey: string, record: UserSkillRecord): UserSkillRecord {
   if (!userSkills[userId]) userSkills[userId] = {};
   userSkills[userId][skillKey] = record;
   return record;
 }
 
-/* Utility */
 export function getQuestionStoreSize(): number {
   return Object.keys(questions).length;
 }
-
-/* Re-exports (compatible names expected elsewhere) */
-export { getQuestionById as getQuestionById, saveQuiz as saveQuiz, getUserSkills as getUserSkills, getUserSkillRecord, setUserSkillRecord };
