@@ -1,47 +1,42 @@
+// backend/src/store/inMemoryDB.ts
+import type { Question, Quiz } from '../types';
+
 /**
  * inMemoryDB.ts
- * Simple in-memory storage for quizzes, questions, attempts and user skills.
+ * Typed in-memory storage for questions, quizzes, attempts and user skills.
  */
-
-type Question = {
-  id: string;
-  prompt: string;
-  type: 'mcq' | 'short';
-  choices?: string[];
-  answer?: string;
-  explanation?: string;
-  skills?: string[];
-  difficulty?: number;
-  max_score?: number;
-};
-
-type Quiz = {
-  id: string;
-  userId: string;
-  category: string;
-  difficulty: string;
-  questions: string[]; // question ids
-  createdAt: string;
-};
 
 const quizzes: Record<string, Quiz> = {};
 const questions: Record<string, Question> = {};
 const userSkills: Record<string, Record<string, { score: number; intervalDays?: number; nextReview?: string }>> = {};
 const attempts: any[] = [];
 
-// quiz helpers
+/* Quiz helpers */
 export function saveQuiz(userId: string, category: string, difficulty: string, qArr: Question[]) {
   const quizId = `quiz_${Date.now()}`;
-  quizzes[quizId] = { id: quizId, userId, category, difficulty, questions: qArr.map(q => q.id), createdAt: new Date().toISOString() };
-  qArr.forEach(q => (questions[q.id] = q));
-  return quizzes[quizId];
+  const quiz: Quiz = {
+    id: quizId,
+    userId,
+    category,
+    difficulty,
+    questions: qArr.map(q => q.id),
+    createdAt: new Date().toISOString()
+  };
+  quizzes[quizId] = quiz;
+
+  // save questions into question store (overwrite if exists)
+  qArr.forEach(q => {
+    questions[q.id] = q;
+  });
+
+  return quiz;
 }
 
-export function getAllQuestions() {
+export function getAllQuestions(): Question[] {
   return Object.values(questions);
 }
 
-export function getQuestionById(id: string) {
+export function getQuestionById(id: string): Question | undefined {
   return questions[id];
 }
 
@@ -50,7 +45,7 @@ export function saveAttempt(attempt: any) {
   return attempt;
 }
 
-// user skills
+/* User skills helpers */
 export function getUserSkills(userId: string) {
   return userSkills[userId] || {};
 }
@@ -66,9 +61,10 @@ export function setUserSkillRecord(userId: string, skillKey: string, record: { s
   return record;
 }
 
-export function getQuestionStoreSize() {
+/* Utility */
+export function getQuestionStoreSize(): number {
   return Object.keys(questions).length;
 }
 
-// re-exports with names used elsewhere
+/* Re-exports (compatible names expected elsewhere) */
 export { getQuestionById as getQuestionById, saveQuiz as saveQuiz, getUserSkills as getUserSkills, getUserSkillRecord, setUserSkillRecord };
