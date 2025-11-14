@@ -1,46 +1,62 @@
 import React, { useState, useEffect } from 'react';
-import { userSkills } from '../services/api';
+import { getUserSkills } from '../services/api'; // <-- This was the line to fix
+import SkillBadge from '../components/SkillBadge'; // Using your SkillBadge component
 
-export default function Dashboard() {
-  const [userId, setUserId] = useState('demo_user');
-  const [skills, setSkills] = useState({});
-  const [loading, setLoading] = useState(false);
+function Dashboard() {
+  const [skills, setSkills] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => { fetchSkills(); }, []); // eslint-disable-line
+  useEffect(() => {
+    // This function runs when the component loads
+    const loadSkills = async () => {
+      try {
+        setError(null);
+        setLoading(true);
+        
+        // Use the imported API function
+        const data = await getUserSkills('anon'); // We'll hardcode 'anon' user for now
+        
+        setSkills(data.skills);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  async function fetchSkills() {
-    setLoading(true);
-    try {
-      const res = await userSkills(userId);
-      setSkills(res.skills || {});
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }
+    loadSkills();
+  }, []); // The empty array [] means this effect runs only once
 
   return (
-    <section>
-      <h2>Dashboard</h2>
-      <div style={{ marginBottom: 10 }}>
-        <label>User:
-          <input value={userId} onChange={e => setUserId(e.target.value)} style={{ marginLeft: 8 }} />
-        </label>
-        <button onClick={fetchSkills} style={{ marginLeft: 8 }}>Load</button>
-      </div>
-
-      {loading && <div className="small">Loading…</div>}
-
-      <div>
-        {Object.keys(skills).length === 0 ? <div className="small">No skill data yet</div> :
-          Object.entries(skills).map(([k, v]) => (
-            <div key={k} style={{ marginBottom: 8 }}>
-              <strong>{k}</strong> — mastery {Math.round((v.score || 0) * 100)}%
-              <div className="small">next review: {new Date(v.nextReview || Date.now()).toLocaleString()}</div>
+    <div>
+      <h1 className="text-3xl font-bold mb-6">Your Skill Dashboard</h1>
+      
+      {loading && <p>Loading your skills...</p>}
+      
+      {error && <p className="text-red-500"><strong>Error:</strong> {error}</p>}
+      
+      {skills && (
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-2xl font-semibold mb-4">Current Skills</h2>
+          {Object.keys(skills).length === 0 ? (
+            <p>You haven't completed any quiz questions yet. Take a quiz to start building your skills!</p>
+          ) : (
+            <div className="flex flex-wrap gap-4">
+              {/* Loop through the skills and display them */}
+              {Object.entries(skills).map(([skillName, skillData]) => (
+                <SkillBadge
+                  key={skillName}
+                  skill={skillName}
+                  score={skillData.score}
+                />
+              ))}
             </div>
-          ))}
-      </div>
-    </section>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
+
+export default Dashboard;

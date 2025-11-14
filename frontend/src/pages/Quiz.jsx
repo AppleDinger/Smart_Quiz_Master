@@ -1,94 +1,85 @@
-import React, { useState, useEffect } from 'react';
-import QuestionCard from '../components/QuestionCard';
-import { submitAnswer, userSkills } from '../services/api';
+import React, { useState } from 'react';
+import { useLocation, Navigate } from 'react-router-dom';
+import { submitAnswer } from '../services/api';
+import QuestionCard from '../components/QuestionCard'; // Assuming this component exists
 
-export default function Quiz({ quiz: initialQuiz, onBack }) {
-  const [quiz, setQuiz] = useState(initialQuiz);
-  const [index, setIndex] = useState(0);
-  const [lastResponse, setLastResponse] = useState(null);
-  const [skills, setSkills] = useState({});
-  const [loading, setLoading] = useState(false);
+function Quiz() {
+  const location = useLocation();
+  const quizData = location.state?.quizData;
 
-  useEffect(() => {
-    setQuiz(initialQuiz);
-    setIndex(0);
-    setLastResponse(null);
-    if (initialQuiz?.userId) fetchSkills(initialQuiz.userId);
-    // eslint-disable-next-line
-  }, [initialQuiz]);
+  const [currentQIndex, setCurrentQIndex] = useState(0);
+  const [userAnswers, setUserAnswers] = useState({});
+  const [feedback, setFeedback] = useState(null);
 
-  async function fetchSkills(userId) {
+  // If the user lands on this page directly without quiz data, send them home.
+  if (!quizData) {
+    return <Navigate to="/" replace />;
+  }
+
+  const { quizId, questions } = quizData;
+  const currentQuestion = questions[currentQIndex];
+
+  const handleAnswerSubmit = async (answer) => {
+    const questionId = currentQuestion.id;
+
+    // Store the user's answer
+    setUserAnswers({ ...userAnswers, [questionId]: answer });
+
     try {
-      const res = await userSkills(userId);
-      setSkills(res.skills || {});
-    } catch (e) {
-      console.warn('fetchSkills failed', e);
+      // Send the answer to the backend
+      const result = await submitAnswer({
+        quizId,
+        questionId,
+        userAnswer: answer,
+      });
+      
+      // Show feedback
+      setFeedback(result);
+
+    } catch (error) {
+      console.error('Failed to submit answer:', error);
+      setFeedback({ error: error.message });
     }
-  }
+  };
 
-  if (!quiz) {
-    return (
-      <section>
-        <div>No quiz loaded. <button onClick={onBack}>Back</button></div>
-      </section>
-    );
-  }
-
-  const q = quiz.questions[index];
-
-  async function handleSubmit(questionId, userAnswer) {
-    setLoading(true);
-    try {
-      const resp = await submitAnswer({ userId: quiz.userId, questionId, userAnswer });
-      setLastResponse(resp);
-      // merge recommendations
-      if (resp.recommendations && resp.recommendations.length) {
-        const before = quiz.questions.slice(0, index + 1);
-        const after = quiz.questions.slice(index + 1);
-        const merged = before.concat(resp.recommendations).concat(after);
-        setQuiz(prev => ({ ...prev, questions: merged }));
-      }
-      if (resp.userSkills) setSkills(resp.userSkills);
-      else if (quiz.userId) fetchSkills(quiz.userId);
-      // advance index
-      setIndex(i => Math.min(i + 1, quiz.questions.length - 1));
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
+  const handleNextQuestion = () => {
+    setFeedback(null); // Clear old feedback
+    if (currentQIndex < questions.length - 1) {
+      setCurrentQIndex(currentQIndex + 1);
+    } else {
+      // Quiz is over!
+      alert('Quiz complete! Check the dashboard to see your skills.');
+      // You could navigate to the dashboard here
     }
-  }
+  };
 
   return (
-    <section>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>Quiz</h2>
-        <div>
-          <button onClick={onBack} className="secondary">End quiz</button>
+    <div>
+      <h1 className="text-3xl font-bold mb-6">Quiz: {quizData.category}</h1>
+      
+      {/* Pass the question data to your card component */}
+      <QuestionCard 
+        question={currentQuestion}
+        onAnswerSubmit={handleAnswerSubmit}
+        disabled={!!feedback} // Disable card after an answer is submitted
+      />
+
+      {feedback && (
+        <div className={`mt-4 p-4 rounded-lg ${feedback.score > 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+          <h2 className="font-bold text-lg">
+            {feedback.score > 0 ? 'Correct!' : 'Incorrect'} (Score: {feedback.score})
+          </h2>
+          <p className="mt-2">{feedback.feedback}</p>
+          <button
+            onClick={handleNextQuestion}
+            className="mt-4 bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700"
+          >
+            {currentQIndex === questions.length - 1 ? 'Finish Quiz' : 'Next Question'}
+          </button>
         </div>
-      </div>
-
-      <div className="small">Quiz ID: {quiz.quizId} — Progress: {index + 1} / {quiz.questions.length}</div>
-
-      <QuestionCard q={q} onSubmit={handleSubmit} disabled={loading} />
-
-      <div style={{ marginTop: 12 }}>
-        <button onClick={() => setIndex(i => Math.max(0, i - 1))} className="secondary">Prev</button>
-        <button onClick={() => setIndex(i => Math.min(quiz.questions.length - 1, i + 1))} className="secondary" style={{ marginLeft: 8 }}>Next</button>
-      </div>
-
-      <section style={{ marginTop: 12 }}>
-        <h3>Mastery snapshot</h3>
-        {Object.keys(skills).length === 0 ? <div className="small">No skill data</div> :
-          Object.entries(skills).map(([k, v]) => (
-            <div key={k}><strong>{k}</strong> — {Math.round((v.score || 0) * 100)}% (next: {new Date(v.nextReview || Date.now()).toLocaleString()})</div>
-          ))}
-      </section>
-
-      <section style={{ marginTop: 12 }}>
-        <h3>Last response</h3>
-        <pre>{lastResponse ? JSON.stringify(lastResponse, null, 2) : '—'}</pre>
-      </section>
-    </section>
+      )}
+    </div>
   );
 }
+
+export default Quiz;

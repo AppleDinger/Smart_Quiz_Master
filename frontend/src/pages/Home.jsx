@@ -1,72 +1,55 @@
 import React, { useState } from 'react';
-import { generateQuiz, requestPractice } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { generateQuiz } from '../services/api';
 
-export default function Home({ onStartQuiz }) {
-  const [userId, setUserId] = useState('demo_user');
-  const [category, setCategory] = useState('Math');
-  const [difficulty, setDifficulty] = useState('easy');
-  const [numQuestions, setNumQuestions] = useState(5);
+function Home() {
   const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState(null);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
-  async function handleGenerate() {
-    setErr(null);
+  const handleStartQuiz = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await generateQuiz({ userId, category, difficulty, numQuestions });
-      // backend returns { quizId, questions }
-      onStartQuiz({ quizId: res.quizId, questions: res.questions, userId });
-    } catch (e) {
-      console.error(e);
-      setErr('Failed to generate quiz');
-    } finally {
+      // 1. Call the API to generate a quiz
+      const quizData = await generateQuiz({
+        category: 'General Knowledge',
+        difficulty: 'medium',
+        numQuestions: 5
+      });
+      
+      // 2. On success, navigate to the Quiz page and pass the
+      // quiz data along in the router's state.
+      navigate('/quiz', { state: { quizData } });
+
+    } catch (err) {
+      setError(err.message);
       setLoading(false);
     }
-  }
-
-  async function handlePractice() {
-    setErr(null);
-    setLoading(true);
-    try {
-      const res = await requestPractice({ userId, numQuestions });
-      onStartQuiz({ quizId: res.quizId, questions: res.questions, userId });
-    } catch (e) {
-      console.error(e);
-      setErr('Failed to request practice');
-    } finally {
-      setLoading(false);
-    }
-  }
+  };
 
   return (
-    <section>
-      <h2>Generate Quiz</h2>
-      <div className="form-row">
-        <label>User:
-          <input value={userId} onChange={e => setUserId(e.target.value)} />
-        </label>
-        <label>Category:
-          <input value={category} onChange={e => setCategory(e.target.value)} />
-        </label>
-        <label>Difficulty:
-          <select value={difficulty} onChange={e => setDifficulty(e.target.value)}>
-            <option value="easy">easy</option>
-            <option value="medium">medium</option>
-            <option value="hard">hard</option>
-          </select>
-        </label>
-        <label># Questions:
-          <input type="number" min="1" max="50" value={numQuestions} onChange={e => setNumQuestions(e.target.value)} />
-        </label>
-      </div>
+    <div className="text-center">
+      <h1 className="text-4xl font-bold mb-4">Welcome to Smart Quiz!</h1>
+      <p className="text-lg text-gray-700 mb-8">
+        Test your knowledge with our adaptive AI-powered quizzes.
+      </p>
+      
+      <button
+        onClick={handleStartQuiz}
+        disabled={loading}
+        className="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg text-xl hover:bg-blue-700 disabled:bg-gray-400"
+      >
+        {loading ? 'Generating...' : 'Start a New Quiz'}
+      </button>
 
-      <div style={{ marginTop: 12 }}>
-        <button onClick={handleGenerate} disabled={loading}>Generate</button>
-        <button onClick={handlePractice} disabled={loading} style={{ marginLeft: 8 }}>Adaptive Practice</button>
-      </div>
-
-      {err && <div className="error">{err}</div>}
-      {loading && <div className="small">Loading…</div>}
-    </section>
+      {error && (
+        <p className="text-red-500 mt-4">
+          <strong>Error:</strong> {error}
+        </p>
+      )}
+    </div>
   );
 }
+
+export default Home;
