@@ -1,6 +1,13 @@
 import React from 'react';
-import { createRoot } from 'react-dom/client';
-import App from './App';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom'; // Import the router
+import App from './App.jsx';
 import './styles/tailwind.css';
 
-createRoot(document.getElementById('root')).render(<App />);
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <BrowserRouter> {/* Add the wrapper here */}
+      <App />
+    </BrowserRouter>
+  </React.StrictMode>
+);

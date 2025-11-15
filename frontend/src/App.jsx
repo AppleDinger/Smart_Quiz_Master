@@ -1,37 +1,38 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { Routes, Route, Link } from 'react-router-dom';
 import Home from './pages/Home';
 import Quiz from './pages/Quiz';
 import Dashboard from './pages/Dashboard';
 
-export default function App() {
-  const [route, setRoute] = useState('home'); // 'home' | 'quiz' | 'dashboard'
-  const [currentQuiz, setCurrentQuiz] = useState(null);
-
-  function onStartQuiz(quiz) {
-    setCurrentQuiz(quiz);
-    setRoute('quiz');
-  }
-
+function App() {
   return (
-    <div className="app-container">
-      <header className="app-header">
-        <h1>Smart Quiz</h1>
-        <nav>
-          <button onClick={() => setRoute('home')} className="nav-btn">Home</button>
-          <button onClick={() => setRoute('quiz')} className="nav-btn" disabled={!currentQuiz}>Quiz</button>
-          <button onClick={() => setRoute('dashboard')} className="nav-btn">Dashboard</button>
-        </nav>
-      </header>
+    <div className="min-h-screen bg-gray-100 text-gray-900">
+      <nav className="bg-white shadow-md">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <Link to="/" className="text-2xl font-bold text-blue-600">
+            🧠 Smart Quiz
+          </Link>
+          <div>
+            <Link to="/" className="mr-4 text-gray-600 hover:text-blue-600">
+              Home
+            </Link>
+            <Link to="/dashboard" className="text-gray-600 hover:text-blue-600">
+              Dashboard
+            </Link>
+          </div>
+        </div>
+      </nav>
 
-      <main>
-        {route === 'home' && <Home onStartQuiz={onStartQuiz} />}
-        {route === 'quiz' && <Quiz quiz={currentQuiz} onBack={() => setRoute('home')} />}
-        {route === 'dashboard' && <Dashboard />}
+      <main className="container mx-auto p-4">
+        {/* Define the pages that can be rendered */}
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/quiz" element={<Quiz />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+        </Routes>
       </main>
-
-      <footer style={{ marginTop: 18, color: '#666', fontSize: 13 }}>
-        Demo frontend — expects backend at <code>http://localhost:4000/api</code>
-      </footer>
     </div>
   );
 }
+
+export default App;
